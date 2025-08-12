@@ -23,6 +23,8 @@ export default function App() {
   const [newTask, setNewTask] = useState("");
   const [activeColumn, setActiveColumn] = useState("Dispatched");
   const [draggedItem, setDraggedItem] = useState(null);
+  const [editingTask, setEditingTask] = useState(null);
+  const [editingText, setEditingText] = useState("");
 
   const addNewTask = () => {
     if (newTask.trim() === "") return;
@@ -41,6 +43,32 @@ export default function App() {
     const updatedColumns = { ...columns };
     updatedColumns[columnId].items = updatedColumns[columnId].items.filter(item => item.id !== taskId);
     setColumns(updatedColumns);
+  };
+
+  const startEditingTask = (columnId, taskId, currentContent) => {
+    setEditingTask({ columnId, taskId });
+    setEditingText(currentContent);
+  };
+
+  const saveEditedTask = () => {
+    if (!editingTask || editingText.trim() === "") return;
+
+    const updatedColumns = { ...columns };
+    const { columnId, taskId } = editingTask;
+    const taskIndex = updatedColumns[columnId].items.findIndex(item => item.id === taskId);
+    
+    if (taskIndex !== -1) {
+      updatedColumns[columnId].items[taskIndex].content = editingText.trim();
+      setColumns(updatedColumns);
+    }
+    
+    setEditingTask(null);
+    setEditingText("");
+  };
+
+  const cancelEditing = () => {
+    setEditingTask(null);
+    setEditingText("");
   };
 
   const handleDragStart = (columnId, item) => {
@@ -138,18 +166,59 @@ export default function App() {
                   <div
                     key={item.id}
                     className="p-3 bg-zinc-700 text-white rounded-lg shadow-md cursor-move hover:bg-zinc-600 transition-colors duration-200 group"
-                    draggable
+                    draggable={!editingTask || editingTask.taskId !== item.id}
                     onDragStart={() => handleDragStart(columnId, item)}
                   >
                     <div className="flex justify-between items-center">
-                      <span className="flex-1">{item.content}</span>
-                      <button
-                        onClick={() => removeTask(columnId, item.id)}
-                        className="ml-2 text-red-400 hover:text-red-300 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                        title="Remove task"
-                      >
-                        ✕
-                      </button>
+                      {editingTask && editingTask.columnId === columnId && editingTask.taskId === item.id ? (
+                        <div className="flex-1 flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={editingText}
+                            onChange={(e) => setEditingText(e.target.value)}
+                            className="flex-1 p-2 bg-zinc-600 text-white rounded border border-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") saveEditedTask();
+                              if (e.key === "Escape") cancelEditing();
+                            }}
+                            autoFocus
+                          />
+                          <button
+                            onClick={saveEditedTask}
+                            className="text-green-400 hover:text-green-300 transition-colors duration-200"
+                            title="Save changes"
+                          >
+                            ✓
+                          </button>
+                          <button
+                            onClick={cancelEditing}
+                            className="text-red-400 hover:text-red-300 transition-colors duration-200"
+                            title="Cancel editing"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <span className="flex-1">{item.content}</span>
+                          <div className="ml-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <button
+                              onClick={() => startEditingTask(columnId, item.id, item.content)}
+                              className="text-blue-400 hover:text-blue-300 transition-colors duration-200"
+                              title="Edit task"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              onClick={() => removeTask(columnId, item.id)}
+                              className="text-red-400 hover:text-red-300 transition-colors duration-200"
+                              title="Remove task"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}
